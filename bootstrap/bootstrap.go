@@ -16,15 +16,20 @@ import (
 	"sort"
 )
 
-const genPackage = "github.com/mailru/easyjson/gen"
-const pkgWriter = "github.com/mailru/easyjson/jwriter"
-const pkgLexer = "github.com/mailru/easyjson/jlexer"
+const (
+	genPackage = "github.com/mailru/easyjson/gen"
+	pkgWriter  = "github.com/mailru/easyjson/jwriter"
+	pkgLexer   = "github.com/mailru/easyjson/jlexer"
+)
 
 var buildFlagsRegexp = regexp.MustCompile("'.+'|\".+\"|\\S+")
 
 type Generator struct {
 	PkgPath, PkgName string
 	Types            []string
+
+	NoMarshalers   bool
+	NoUnmarshalers bool
 
 	NoStdMarshalers          bool
 	SnakeCase                bool
@@ -65,20 +70,33 @@ func (g *Generator) writeStub() error {
 		fmt.Fprintln(f)
 		fmt.Fprintln(f, "import (")
 		fmt.Fprintln(f, `  "`+pkgWriter+`"`)
-		fmt.Fprintln(f, `  "`+pkgLexer+`"`)
+		if !g.NoUnmarshalers {
+			fmt.Fprintln(f, `  "`+pkgLexer+`"`)
+		}
 		fmt.Fprintln(f, ")")
 	}
+
+	fmt.Println(g.NoMarshalers)
+	fmt.Println(g.NoUnmarshalers)
 
 	sort.Strings(g.Types)
 	for _, t := range g.Types {
 		fmt.Fprintln(f)
 		if !g.NoStdMarshalers {
-			fmt.Fprintln(f, "func (", t, ") MarshalJSON() ([]byte, error) { return nil, nil }")
-			fmt.Fprintln(f, "func (*", t, ") UnmarshalJSON([]byte) error { return nil }")
+			if !g.NoMarshalers {
+				fmt.Fprintln(f, "func (", t, ") MarshalJSON() ([]byte, error) { return nil, nil }")
+			}
+			if !g.NoUnmarshalers {
+				fmt.Fprintln(f, "func (*", t, ") UnmarshalJSON([]byte) error { return nil }")
+			}
 		}
 
-		fmt.Fprintln(f, "func (", t, ") MarshalEasyJSON(w *jwriter.Writer) {}")
-		fmt.Fprintln(f, "func (*", t, ") UnmarshalEasyJSON(l *jlexer.Lexer) {}")
+		if !g.NoMarshalers {
+			fmt.Fprintln(f, "func (", t, ") MarshalEasyJSON(w *jwriter.Writer) {}")
+		}
+		if !g.NoUnmarshalers {
+			fmt.Fprintln(f, "func (*", t, ") UnmarshalEasyJSON(l *jlexer.Lexer) {}")
+		}
 		fmt.Fprintln(f)
 		fmt.Fprintln(f, "type EasyJSON_exporter_"+t+" *"+t)
 	}
@@ -124,6 +142,12 @@ func (g *Generator) writeMain() (path string, err error) {
 	}
 	if g.OmitEmpty {
 		fmt.Fprintln(f, "  g.OmitEmpty()")
+	}
+	if g.NoMarshalers {
+		fmt.Fprintln(f, "  g.NoMarshalers()")
+	}
+	if g.NoUnmarshalers {
+		fmt.Fprintln(f, "  g.NoUnmarshalers()")
 	}
 	if g.NoStdMarshalers {
 		fmt.Fprintln(f, "  g.NoStdMarshalers()")

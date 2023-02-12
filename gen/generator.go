@@ -13,9 +13,11 @@ import (
 	"unicode"
 )
 
-const pkgWriter = "github.com/mailru/easyjson/jwriter"
-const pkgLexer = "github.com/mailru/easyjson/jlexer"
-const pkgEasyJSON = "github.com/mailru/easyjson"
+const (
+	pkgWriter   = "github.com/mailru/easyjson/jwriter"
+	pkgLexer    = "github.com/mailru/easyjson/jlexer"
+	pkgEasyJSON = "github.com/mailru/easyjson"
+)
 
 // FieldNamer defines a policy for generating names for struct fields.
 type FieldNamer interface {
@@ -32,6 +34,9 @@ type Generator struct {
 	hashString string
 
 	varCounter int
+
+	noMarshalers   bool
+	noUnmarshalers bool
 
 	noStdMarshalers          bool
 	omitEmpty                bool
@@ -105,6 +110,16 @@ func (g *Generator) UseSnakeCase() {
 // UseLowerCamelCase sets lowerCamelCase field naming strategy.
 func (g *Generator) UseLowerCamelCase() {
 	g.fieldNamer = LowerCamelCaseFieldNamer{}
+}
+
+// NoMarshalers instructs not to generate MarshalJSON methods.
+func (g *Generator) NoMarshalers() {
+	g.noMarshalers = true
+}
+
+// NoUnmarshalers instructs not to generate UnmarshalJSON methods.
+func (g *Generator) NoUnmarshalers() {
+	g.noUnmarshalers = true
 }
 
 // NoStdMarshalers instructs not to generate standard MarshalJSON/UnmarshalJSON
@@ -204,22 +219,32 @@ func (g *Generator) Run(out io.Writer) error {
 		g.typesUnseen = g.typesUnseen[:len(g.typesUnseen)-1]
 		g.typesSeen[t] = true
 
-		if err := g.genDecoder(t); err != nil {
-			return err
+		if !g.noUnmarshalers {
+			if err := g.genDecoder(t); err != nil {
+				return err
+			}
 		}
-		if err := g.genEncoder(t); err != nil {
-			return err
+
+		if !g.noMarshalers {
+			if err := g.genEncoder(t); err != nil {
+				return err
+			}
 		}
 
 		if !g.marshalers[t] {
 			continue
 		}
 
-		if err := g.genStructMarshaler(t); err != nil {
-			return err
+		if !g.noMarshalers {
+			if err := g.genStructMarshaler(t); err != nil {
+				return err
+			}
 		}
-		if err := g.genStructUnmarshaler(t); err != nil {
-			return err
+
+		if !g.noUnmarshalers {
+			if err := g.genStructUnmarshaler(t); err != nil {
+				return err
+			}
 		}
 	}
 	g.printHeader()

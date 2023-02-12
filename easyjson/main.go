@@ -16,21 +16,25 @@ import (
 	"github.com/mailru/easyjson/parser"
 )
 
-var buildTags = flag.String("build_tags", "", "build tags to add to generated file")
-var genBuildFlags = flag.String("gen_build_flags", "", "build flags when running the generator while bootstrapping")
-var snakeCase = flag.Bool("snake_case", false, "use snake_case names instead of CamelCase by default")
-var lowerCamelCase = flag.Bool("lower_camel_case", false, "use lowerCamelCase names instead of CamelCase by default")
-var noStdMarshalers = flag.Bool("no_std_marshalers", false, "don't generate MarshalJSON/UnmarshalJSON funcs")
-var omitEmpty = flag.Bool("omit_empty", false, "omit empty fields by default")
-var allStructs = flag.Bool("all", false, "generate marshaler/unmarshalers for all structs in a file")
-var simpleBytes = flag.Bool("byte", false, "use simple bytes instead of Base64Bytes for slice of bytes")
-var leaveTemps = flag.Bool("leave_temps", false, "do not delete temporary files")
-var stubs = flag.Bool("stubs", false, "only generate stubs for marshaler/unmarshaler funcs")
-var noformat = flag.Bool("noformat", false, "do not run 'gofmt -w' on output file")
-var specifiedName = flag.String("output_filename", "", "specify the filename of the output")
-var processPkg = flag.Bool("pkg", false, "process the whole package instead of just the given file")
-var disallowUnknownFields = flag.Bool("disallow_unknown_fields", false, "return error if any unknown field in json appeared")
-var skipMemberNameUnescaping = flag.Bool("disable_members_unescape", false, "don't perform unescaping of member names to improve performance")
+var (
+	buildTags                = flag.String("build_tags", "", "build tags to add to generated file")
+	genBuildFlags            = flag.String("gen_build_flags", "", "build flags when running the generator while bootstrapping")
+	snakeCase                = flag.Bool("snake_case", false, "use snake_case names instead of CamelCase by default")
+	lowerCamelCase           = flag.Bool("lower_camel_case", false, "use lowerCamelCase names instead of CamelCase by default")
+	noStdMarshalers          = flag.Bool("no_std_marshalers", false, "don't generate MarshalJSON/UnmarshalJSON funcs")
+	noMarshalers             = flag.Bool("no_marshalers", false, "don't generate MarshalJSON funcs")
+	noUnmarshalers           = flag.Bool("no_unmarshalers", false, "don't generate UnmarshalJSON funcs")
+	omitEmpty                = flag.Bool("omit_empty", false, "omit empty fields by default")
+	allStructs               = flag.Bool("all", false, "generate marshaler/unmarshalers for all structs in a file")
+	simpleBytes              = flag.Bool("byte", false, "use simple bytes instead of Base64Bytes for slice of bytes")
+	leaveTemps               = flag.Bool("leave_temps", false, "do not delete temporary files")
+	stubs                    = flag.Bool("stubs", false, "only generate stubs for marshaler/unmarshaler funcs")
+	noformat                 = flag.Bool("noformat", false, "do not run 'gofmt -w' on output file")
+	specifiedName            = flag.String("output_filename", "", "specify the filename of the output")
+	processPkg               = flag.Bool("pkg", false, "process the whole package instead of just the given file")
+	disallowUnknownFields    = flag.Bool("disallow_unknown_fields", false, "return error if any unknown field in json appeared")
+	skipMemberNameUnescaping = flag.Bool("disable_members_unescape", false, "don't perform unescaping of member names to improve performance")
+)
 
 func generate(fname string) (err error) {
 	fInfo, err := os.Stat(fname)
@@ -77,6 +81,8 @@ func generate(fname string) (err error) {
 		SnakeCase:                *snakeCase,
 		LowerCamelCase:           *lowerCamelCase,
 		NoStdMarshalers:          *noStdMarshalers,
+		NoMarshalers:             *noMarshalers,
+		NoUnmarshalers:           *noUnmarshalers,
 		DisallowUnknownFields:    *disallowUnknownFields,
 		SkipMemberNameUnescaping: *skipMemberNameUnescaping,
 		OmitEmpty:                *omitEmpty,
